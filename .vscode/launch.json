@@ -1,16 +1,29 @@
 {
 	"configurations": [
-	{
-		"args": [
-			"--extensionDevelopmentPath=${workspaceFolder}"
-		],
-		"name": "Launch Extension",
-		"outFiles": [
-			"${workspaceFolder}/out/**/*.js"
-		],
-		// "preLaunchTask": "npm",
-		"request": "launch",
-		"type": "extensionHost"
-	}
-	]
+		{
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}"
+			],
+			"name": "Launch Extension with npm",
+			"outFiles": [
+				"${workspaceFolder}/out/**/*.js"
+			],
+			"preLaunchTask": "Compile and Watch",
+			"request": "launch",
+			"type": "extensionHost",			
+		},
+		{
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}"
+			],
+			"name": "Launch Extension without npm",
+			"outFiles": [
+				"${workspaceFolder}/out/**/*.js"
+			],
+			// "preLaunchTask": "npm",
+			"request": "launch",
+			"type": "extensionHost"
+		}
+	],
+	
 }
