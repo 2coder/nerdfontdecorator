@@ -1,3 +1,4 @@
+import { assert } from "console";
 import unraw from "unraw";
 
 const glyphSetCodepointRanges = [
@@ -32,6 +33,18 @@ function isNerdfontCodepoint(codepoint: number | undefined): boolean {
     return codepoint !== undefined && glyphSetCodepointRanges.some(range => codepoint >= range.low && codepoint <= range.high);
 }
 
+interface IMarkerCombiner {
+    previousCombiner: MarkerCombiner | undefined;
+
+    firstMarker: EscapeSequenceMarker;
+    lastMarker: EscapeSequenceMarker;
+
+    markers: EscapeSequenceMarker[];
+    combinedEscapeSequences: string;
+}
+
+type MarkerCombiner = IMarkerCombiner;
+
 export interface INerdfontDecoration {
     cookedString: string;
     start: number;
@@ -50,6 +63,16 @@ export interface IEscapeSequenceMarker {
 export type EscapeSequenceMarker = IEscapeSequenceMarker;
 export type EscapeSequenceMarkers = EscapeSequenceMarker[];
 
+function combinerToDecoration(combiner: MarkerCombiner): INerdfontDecoration {
+    const cookedString = unraw(combiner.combinedEscapeSequences);
+    const hoverMessage = "'" + combiner.combinedEscapeSequences + "'" + " => " + cookedString;
+
+    let start = combiner.firstMarker.start;
+    let end = combiner.lastMarker.end;
+
+    return { cookedString, start, end, hoverMessage };
+}
+
 export function findUnicodeEscapeSequences(text: string): EscapeSequenceMarkers {
     let match;
     let escapeSequenceMarkers: EscapeSequenceMarkers = [];
@@ -64,51 +87,41 @@ export function findUnicodeEscapeSequences(text: string): EscapeSequenceMarkers 
     return escapeSequenceMarkers;
 }
 
+
+
 export function getNerdfontDecorations(escapeSequenceMarkers: EscapeSequenceMarkers): NerdfontDecorations {
-    let decorations: NerdfontDecorations = [];
-    let previousMarker: EscapeSequenceMarker | undefined;
-    let combinedEscapeSequences: string;
+    const lastMarkerCombiner =
+        escapeSequenceMarkers.reduce((previousCombiner: any, marker) => {
+            const markerCombiner = previousCombiner as MarkerCombiner || { previousCombiner, firstMarker: marker, lastMarker: marker, markers: [marker], combinedEscapeSequences: marker.escapeSequence };
 
-    escapeSequenceMarkers.forEach(marker => {
-        if (previousMarker === undefined) {
-            combinedEscapeSequences = marker.escapeSequence;
-            previousMarker = marker;
-            return;
+            if (previousCombiner === undefined) {
+                return markerCombiner;
+            }
+
+            let distance = marker.start - previousCombiner.lastMarker.end;
+
+            if (distance <= 1) {
+                markerCombiner.combinedEscapeSequences += ((distance === 1 ? " " : "") + marker.escapeSequence);
+                markerCombiner.lastMarker = marker;
+                markerCombiner.markers.push(marker);
+                return markerCombiner;
+            }
+
+        return { previousCombiner: markerCombiner, firstMarker: marker, lastMarker: marker, markers: [marker], combinedEscapeSequences: marker.escapeSequence } as MarkerCombiner;
+        }, undefined as MarkerCombiner | undefined);
+
+    let markerCombiner = lastMarkerCombiner as MarkerCombiner;
+    const decorations: NerdfontDecorations = [];
+
+    while (markerCombiner !== undefined) {
+        decorations.push(combinerToDecoration(markerCombiner));
+
+        if (markerCombiner.previousCombiner === undefined) {
+            break;
         }
 
-        let distance;
-
-        if ((distance = marker.start - previousMarker.end) <= 1) {
-            combinedEscapeSequences += ((distance === 1 ? " " : "") + marker.escapeSequence);
-            previousMarker = marker;
-            return;
-        }
-
-        let cookedString = unraw(combinedEscapeSequences);
-        let hoverMessage = "'" + combinedEscapeSequences + "'" + " => " + cookedString;
-        let start = previousMarker.start;
-        let end = marker.end;
-
-        switch (cookedString.length) {
-            case 1: // easy case
-                let codepoint = cookedString.codePointAt(0);
-                if (isNerdfontCodepoint(codepoint)) {
-                    decorations.push({ cookedString, start, end, hoverMessage });
-                }
-                break;
-
-            case 2: // more tricky if we have a surrogate pair
-                let codepoint1 = cookedString.codePointAt(0);
-                let codepoint2 = cookedString.codePointAt(1);
-                if (isNerdfontCodepoint(codepoint1) && isNerdfontCodepoint(codepoint2)) {
-                    decorations.push({ cookedString, start, end, hoverMessage });
-                }
-                break;
-            default:
-                console.log(`Invalid escape sequence: ${combinedEscapeSequences}`);
-                break;
-        }
-    });
+        markerCombiner = markerCombiner.previousCombiner;
+    }
 
     return decorations;
 }
