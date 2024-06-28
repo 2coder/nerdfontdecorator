@@ -1,8 +1,19 @@
 {
+  "$schema": "https://json.schemastore.org/package",
   "name": "tukoda-nerdfontdecorator",
   "displayName": "Nerd Font Text Editor Decorator",
   "description": "Show Nerd Font icons in the text editor for escape sequences like '\\uE0A0' or '\\u{E0A0}'",
-  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/2coder/nerdfontdecorator.git"
+  },
+  "version": "0.1.0",
+  "license": "MIT",
+  "author": {
+    "name": "Daniel Horn",
+    "email": "daniel@2coder.de",
+    "url": "https://2coder.de"
+  },
   "engines": {
     "vscode": "^1.73.0"
   },
